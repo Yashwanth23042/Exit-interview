@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Voice Exit Interview</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .status { 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin: 20px 0; 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        .status.idle { 
+            background: #ffa500; 
+            color: white; 
+        }
+        .status.connected { 
+            background: #4CAF50; 
+            color: white; 
+        }
+        .status.listening { 
+            background: #f44336; 
+            color: white; 
+            animation: pulse 1.5s infinite;
+        }
+        .status.speaking { 
+            background: #2196F3; 
+            color: white; 
+        }
+        @keyframes pulse { 
+            0% { opacity: 1; transform: scale(1); } 
+            50% { opacity: 0.7; transform: scale(1.05); } 
+            100% { opacity: 1; transform: scale(1); } 
+        }
+        .controls { 
+            text-align: center; 
+            margin: 30px 0; 
+        }
+        button { 
+            padding: 15px 30px; 
+            margin: 10px; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .start-btn { 
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); 
+            color: white; 
+        }
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        .stop-btn { 
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); 
+            color: white; 
+        }
+        .stop-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+        }
+        .transcript { 
+            background: #f9f9f9; 
+            border-left: 5px solid #667eea; 
+            padding: 20px; 
+            margin: 30px 0; 
+            border-radius: 10px;
+            max-height: 400px; 
+            overflow-y: auto; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .question { 
+            font-weight: bold; 
+            color: #667eea; 
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .answer { 
+            color: #555; 
+            margin-bottom: 20px;
+            padding-left: 20px;
+            border-left: 3px solid #ddd;
+            font-style: italic;
+        }
+        .timer { 
+            text-align: center; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 10px;
+            background: #f0f0f0;
+        }
+        .timer.warning { 
+            color: orange; 
+            background: #fff8e1;
+        }
+        .timer.error { 
+            color: red; 
+            background: #ffebee;
+        }
+        .progress { 
+            margin: 30px 0; 
+            text-align: center;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+        .voice-indicator {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            animation: pulse 2s infinite;
+        }
+        .hidden {
+            display: none;
+        }
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Nova Voice Exit Interview</h1>
+            <p>Powered by Amazon Nova Sonic</p>
+        </div>
+        
+        <div id="status" class="status idle">Initializing...</div>
+        
+        <div id="voiceIndicator" class="voice-indicator hidden">🎙️</div>
+        
+        <div class="controls">
+            <button id="startBtn" class="start-btn">Start Voice Interview</button>
+            <button id="stopBtn" class="stop-btn" disabled>End Interview</button>
+        </div>
+        
+        <div id="timer" class="timer">Time remaining: 15:00</div>
+        
+        <div class="progress">
+            <div>Answered: <span id="progress">0</span> of <span id="totalQuestions">0</span> questions</div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div id="transcript" class="transcript"></div>
+        
+        <div id="errorMessage" class="error-message hidden"></div>
+    </div>
+
+    <script>
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        if (!token) {
+            showError('Error: No interview token provided');
+            document.getElementById('startBtn').disabled = true;
+        }
+        
+        // Interview state
+        let websocket;
+        let mediaRecorder;
+        let audioContext;
+        let isRecording = false;
+        let interviewActive = false;
+        let startTime;
+        let timeoutSeconds = 900; // 15 minutes
+        let totalQuestions = 0;
+        let answeredQuestions = 0;
+        let audioQueue = [];
+        let isPlaying = false;
+        
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const transcriptEl = document.getElementById('transcript');
+        const timerEl = document.getElementById('timer');
+        const progressEl = document.getElementById('progress');
+        const totalQuestionsEl = document.getElementById('totalQuestions');
+        const progressFillEl = document.getElementById('progressFill');
+        const voiceIndicatorEl = document.getElementById('voiceIndicator');
+        const errorMessageEl = document.getElementById('errorMessage');
+        
+        // Event listeners
+        startBtn.addEventListener('click', startInterview);
+        stopBtn.addEventListener('click', stopInterview);
+        
+        // Initialize audio context
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        // Show error message
+        function showError(message) {
+            errorMessageEl.textContent = message;
+            errorMessageEl.classList.remove('hidden');
+            statusEl.textContent = 'Error';
+            statusEl.className = 'status idle';
+        }
+        
+        // Start interview
+        async function startInterview() {
+            try {
+                initAudio();
+                
+                // Get microphone access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 16000
+                    } 
+                });
+                
+                // Setup media recorder
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm',
+                    audioBitsPerSecond: 16000
+                });
+                
+                mediaRecorder.ondataavailable = handleAudioData;
+                
+                // Connect WebSocket
+                const wsUrl = `ws://${window.location.hostname}:8000/ws/interview/${token}`;
+                websocket = new WebSocket(wsUrl);
+                
+                websocket.onopen = () => {
+                    statusEl.textContent = 'Connected to Nova';
+                    statusEl.className = 'status connected';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    interviewActive = true;
+                    startTime = Date.now();
+                    updateTimer();
+                    
+                    // Start recording
+                    mediaRecorder.start(100); // Send chunks every 100ms
+                    isRecording = true;
+                };
+                
+                websocket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+                
+                websocket.onclose = () => {
+                    statusEl.textContent = 'Connection closed';
+                    statusEl.className = 'status idle';
+                    stopInterview();
+                };
+                
+                websocket.onerror = (error) => {
+                    showError('Connection error. Please check your internet connection and try again.');
+                    console.error('WebSocket error:', error);
+                    stopInterview();
+                };
+                
+            } catch (error) {
+                showError(`Error: ${error.message}. Please ensure you have a microphone connected and have granted permission.`);
+                console.error('Error starting interview:', error);
+            }
+        }
+        
+        // Handle audio data from microphone
+        function handleAudioData(event) {
+            if (event.data.size > 0 && websocket && websocket.readyState === WebSocket.OPEN) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = btoa(reader.result);
+                    websocket.send(JSON.stringify({
+                        type: 'audio_chunk',
+                        data: base64
+                    }));
+                };
+                reader.readAsBinaryString(event.data);
+            }
+        }
+        
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'session_start':
+                    totalQuestions = data.total_questions || 0;
+                    timeoutSeconds = data.timeout_seconds || 900;
+                    totalQuestionsEl.textContent = totalQuestions;
+                    updateProgress();
+                    break;
+                    
+                case 'text':
+                    addTranscript(data.role, data.content);
+                    if (data.role === 'ASSISTANT') {
+                        statusEl.textContent = 'Nova is speaking...';
+                        statusEl.className = 'status speaking';
+                        voiceIndicatorEl.classList.remove('hidden');
+                    } else {
+                        statusEl.textContent = 'Listening to you...';
+                        statusEl.className = 'status listening';
+                        voiceIndicatorEl.classList.remove('hidden');
+                    }
+                    break;
+                    
+                case 'audio':
+                    queueAudio(data.data);
+                    break;
+                    
+                case 'response_saved':
+                    answeredQuestions++;
+                    updateProgress();
+                    break;
+                    
+                case 'interview_complete':
+                    statusEl.textContent = 'Interview completed successfully!';
+                    statusEl.className = 'status connected';
+                    voiceIndicatorEl.classList.add('hidden');
+                    stopInterview();
+                    break;
+                    
+                case 'timeout':
+                    statusEl.textContent = 'Interview time limit reached!';
+                    statusEl.className = 'status idle';
+                    voiceIndicatorEl.classList.add('hidden');
+                    stopInterview();
+                    break;
+                    
+                case 'error':
+                    showError(data.message || 'An error occurred during the interview');
+                    stopInterview();
+                    break;
+            }
+        }
+        
+        // Queue audio for playback
+        function queueAudio(base64Audio) {
+            audioQueue.push(base64Audio);
+            if (!isPlaying) {
+                playNextAudio();
+            }
+        }
+        
+        // Play next audio chunk
+        function playNextAudio() {
+            if (audioQueue.length === 0) {
+                isPlaying = false;
+                return;
+            }
+            
+            isPlaying = true;
+            const base64Audio = audioQueue.shift();
+            
+            try {
+                // Convert base64 to ArrayBuffer
+                const binaryString = atob(base64Audio);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                // Decode and play
+                audioContext.decodeAudioData(bytes.buffer, (buffer) => {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioContext.destination);
+                    source.onended = playNextAudio;
+                    source.start(0);
+                }, (error) => {
+                    console.error('Error decoding audio:', error);
+                    playNextAudio();
+                });
+            } catch (error) {
+                console.error('Error playing audio:', error);
+                playNextAudio();
+            }
+        }
+        
+        // Add transcript entry
+        function addTranscript(role, content) {
+            const entry = document.createElement('div');
+            if (role === 'ASSISTANT') {
+                entry.innerHTML = `<div class="question">🤖 Nova: ${content}</div>`;
+            } else {
+                entry.innerHTML = `<div class="answer">👤 You: ${content}</div>`;
+            }
+            transcriptEl.appendChild(entry);
+            transcriptEl.scrollTop = transcriptEl.scrollHeight;
+        }
+        
+        // Update progress
+        function updateProgress() {
+            progressEl.textContent = answeredQuestions;
+            const percentage = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+            progressFillEl.style.width = `${percentage}%`;
+        }
+        
+        // Update timer
+        function updateTimer() {
+            if (!interviewActive) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const remaining = Math.max(0, timeoutSeconds - elapsed);
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            
+            timerEl.textContent = `Time remaining: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (remaining <= 30) {
+                timerEl.className = 'timer error';
+            } else if (remaining <= 60) {
+                timerEl.className = 'timer warning';
+            } else {
+                timerEl.className = 'timer';
+            }
+            
+            if (remaining > 0) {
+                setTimeout(updateTimer, 1000);
+            }
+        }
+        
+        // Stop interview
+        function stopInterview() {
+            interviewActive = false;
+            
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            
+            if (websocket) {
+                websocket.close();
+            }
+            
+            if (isRecording) {
+                // Stop all tracks
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+            }
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            voiceIndicatorEl.classList.add('hidden');
+            
+            if (!errorMessageEl.classList.contains('hidden')) {
+                statusEl.textContent = 'Interview ended';
+                statusEl.className = 'status idle';
+            }
+        }
+    </script>
+</body>
+</html>
